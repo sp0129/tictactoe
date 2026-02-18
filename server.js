@@ -1,10 +1,10 @@
-const express = require(‘express’);
-const http = require(‘http’);
-const WebSocket = require(‘ws’);
+const express = require("express");
+const http = require("http");
+const WebSocket = require("ws");
 const {
     v4: uuidv4
-} = require(‘uuid’);
-const path = require(‘path’);
+} = require("uuid");
+const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
@@ -37,7 +37,7 @@ function checkWinner(board) {
         }
     }
     if (board.every(cell => cell !== null)) return {
-        winner: ‘draw’,
+        winner: "draw",
         line: []
     };
     return null;
@@ -48,8 +48,8 @@ function createSession(sessionId) {
         sessionId,
         players: [], // [{ socketId, ws }]
         board: Array(9).fill(null),
-        currentTurn: ‘X’,
-        status: ‘waiting’,
+        currentTurn: "X",
+        status: "waiting",
         winner: null,
         winLine: [],
     };
@@ -77,21 +77,21 @@ function send(ws, event, data) {
 }
 
 // Routes
-app.use(express.static(path.join(__dirname, ‘public’)));
+app.use(express.static(path.join(__dirname, "public")));
 
-app.get(’/’, (req, res) => {
+app.get("/", (req, res) => {
 const sessionId = uuidv4(); sessions.set(sessionId, createSession(sessionId)); res.redirect(`/game/${sessionId}`);
 });
 
-app.get(’/game/: sessionId’, (req, res) => {
-    res.sendFile(path.join(__dirname, ‘public’, ‘index.html’));
+app.get("/game/:sessionId", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // WebSocket
-wss.on(‘connection’, (ws) => {
+wss.on("connection", (ws) => {
     ws.id = uuidv4();
 
-    ws.on(‘message’, (raw) => {
+    ws.on("message", (raw) => {
         let msg;
         try {
             msg = JSON.parse(raw);
@@ -103,21 +103,21 @@ wss.on(‘connection’, (ws) => {
             data
         } = msg;
 
-        if (event === 'join') {
+        if (event === "join") {
             const {
                 sessionId
             } = data;
             const session = sessions.get(sessionId);
 
             if (!session) {
-                return send(ws, 'error', {
-                    message: 'Session not found.'
+                return send(ws, "error", {
+                    message: "Session not found."
                 });
             }
 
             if (session.players.length >= 2) {
-                return send(ws, 'error', {
-                    message: 'This game is already full.'
+                return send(ws, "error", {
+                    message: "This game is already full."
                 });
             }
 
@@ -131,50 +131,50 @@ wss.on(‘connection’, (ws) => {
             if (session.players.length === 1) {
                 // Player 1 waiting
                 const shareUrl = `${data.origin}/game/${sessionId}`;
-                send(ws, 'waiting', {
+                send(ws, "waiting", {
                     sessionId,
                     shareUrl
                 });
             } else {
                 // Player 2 joined — start game
-                session.status = 'playing';
+                session.status = "playing";
                 session.players.forEach((p, i) => {
-                    send(p.ws, 'start', {
+                    send(p.ws, "start", {
                         board: session.board,
                         currentTurn: session.currentTurn,
-                        yourRole: i === 0 ? 'X' : 'O',
+                        yourRole: i === 0 ? "X" : "O",
                     });
                 });
             }
         }
 
-        if (event === 'move') {
+        if (event === "move") {
             const {
                 sessionId,
                 cellIndex
             } = data;
             const session = sessions.get(sessionId);
 
-            if (!session || session.status !== 'playing') {
-                return send(ws, 'error', {
-                    message: 'No active game session.'
+            if (!session || session.status !== "playing") {
+                return send(ws, "error", {
+                    message: "No active game session."
                 });
             }
 
             const playerIndex = session.players.findIndex(p => p.id === ws.id);
             if (playerIndex === -1) return;
 
-            const playerRole = playerIndex === 0 ? 'X' : 'O';
+            const playerRole = playerIndex === 0 ? "X" : "O";
 
             if (session.currentTurn !== playerRole) {
-                return send(ws, 'error', {
+                return send(ws, "error", {
                     message: "It's not your turn."
                 });
             }
 
             if (session.board[cellIndex] !== null) {
-                return send(ws, 'error', {
-                    message: 'Cell already occupied.'
+                return send(ws, "error", {
+                    message: "Cell already occupied."
                 });
             }
 
@@ -183,17 +183,17 @@ wss.on(‘connection’, (ws) => {
 
             const result = checkWinner(session.board);
             if (result) {
-                session.status = 'ended';
+                session.status = "ended";
                 session.winner = result.winner;
-                broadcast(session, 'end', {
+                broadcast(session, "end", {
                     board: session.board,
                     winner: result.winner,
                     winLine: result.line,
                 });
                 sessions.delete(sessionId);
             } else {
-                session.currentTurn = session.currentTurn === 'X' ? 'O' : 'X';
-                broadcast(session, 'update', {
+                session.currentTurn = session.currentTurn === "X" ? "O" : "X";
+                broadcast(session, "update", {
                     board: session.board,
                     currentTurn: session.currentTurn,
                 });
@@ -202,7 +202,7 @@ wss.on(‘connection’, (ws) => {
 
     });
 
-    ws.on(‘close’, () => {
+    ws.on("close", () => {
         const {
             sessionId
         } = ws;
@@ -213,7 +213,7 @@ wss.on(‘connection’, (ws) => {
         // Notify the other player
         session.players
             .filter(p => p.id !== ws.id)
-            .forEach(p => send(p.ws, 'opponent_left', {}));
+            .forEach(p => send(p.ws, "opponent_left", {}));
 
         sessions.delete(sessionId);
 
