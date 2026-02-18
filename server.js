@@ -77,7 +77,6 @@ let msg;
 try { msg = JSON.parse(raw); } catch { return; }
 const { event, data } = msg;
 
-```
 if (event === 'join') {
   const { sessionId } = data;
   const session = sessions.get(sessionId);
@@ -153,7 +152,6 @@ if (event === 'move') {
     });
   }
 }
-```
 
 });
 
@@ -163,14 +161,12 @@ if (!sessionId) return;
 const session = sessions.get(sessionId);
 if (!session) return;
 
-```
 // Notify the other player
 session.players
   .filter(p => p.id !== ws.id)
   .forEach(p => send(p.ws, 'opponent_left', {}));
 
 sessions.delete(sessionId);
-```
 
 });
 });
